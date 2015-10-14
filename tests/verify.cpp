@@ -18,6 +18,7 @@
 #include "../include/embree2/rtcore_ray.h"
 #include "../kernels/common/default.h"
 #include <vector>
+#include <thread>
 
 #if !defined(_MM_SET_DENORMALS_ZERO_MODE)
 #define _MM_DENORMALS_ZERO_ON   (0x0040)
@@ -3574,9 +3575,31 @@ namespace embree
     return distance < 0.0002f;
   }
 
+  void threadFunction()
+  {
+    for (size_t j=0; j<5; j++)
+    {
+      void* allocs[1024];
+      for (size_t i=0; i<1024; i++)
+        allocs[i] = alignedMalloc(rand()%10000);
+      for (size_t i=0; i<1024; i++)
+        alignedFree(allocs[i]);
+    }
+  }
+
   /* main function in embree namespace */
   int main(int argc, char** argv) 
   {
+#if 0
+    std::thread threads[32];
+    while (true) {
+      PING;
+      for (size_t i=0; i<4; i++) threads[i] = std::thread(threadFunction);
+      for (size_t i=0; i<4; i++) threads[i].join();
+    }
+    exit(1);
+#endif
+
     const Vec3fa pos = Vec3fa(148376.0f,1234.0f,-223423.0f);
 
     /* for best performance set FTZ and DAZ flags in MXCSR control and status register */
@@ -3593,14 +3616,14 @@ namespace embree
     /* perform tests */
     g_device = rtcNewDevice(g_rtcore.c_str());
     //POSITIVE("regression_static_memory_monitor",  rtcore_regression_memory_monitor(rtcore_regression_static_thread));
-    //POSITIVE("regression_static",         rtcore_regression(rtcore_regression_static_thread,false));
+    POSITIVE("regression_static",         rtcore_regression(rtcore_regression_static_thread,1));
     //POSITIVE("regression_dynamic",        rtcore_regression(rtcore_regression_dynamic_thread,false));
     //POSITIVE("regression_garbage_geom",   rtcore_regression_garbage());
     //POSITIVE("regression_static_memory_monitor",         rtcore_regression_memory_monitor(rtcore_regression_static_thread));
     //POSITIVE("regression_dynamic_memory_monitor",        rtcore_regression_memory_monitor(rtcore_regression_dynamic_thread));
     //POSITIVE("regression_garbage_geom",   rtcore_regression_garbage());
     //POSITIVE("interpolate_subdiv4",                rtcore_interpolate_subdiv(4));
-    //exit(1);
+    exit(1);
 
 #if 1
     POSITIVE("empty_static",              rtcore_empty(RTC_SCENE_STATIC));
